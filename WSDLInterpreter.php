@@ -2,23 +2,23 @@
 
 /**
  * IMPORTANT
- * 
+ *
  * This class was edited by Markus Staab and is not longer in its origin state.
  * Therefore do not override with a possible later version of the underlying class!
  */
 
 /**
  * Interprets WSDL documents for the purposes of PHP 5 object creation
- * 
- * The WSDLInterpreter package is used for the interpretation of a WSDL 
+ *
+ * The WSDLInterpreter package is used for the interpretation of a WSDL
  * document into PHP classes that represent the messages using inheritance
  * and typing as defined by the WSDL rather than SoapClient's limited
  * interpretation.  PHP classes are also created for each service that
  * represent the methods with any appropriate overloading and strict
  * variable type checking as defined by the WSDL.
  *
- * PHP version 5 
- * 
+ * PHP version 5
+ *
  * LICENSE: This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -31,28 +31,28 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @category    WebServices 
- * @package     WSDLInterpreter  
+ * @category    WebServices
+ * @package     WSDLInterpreter
  * @author      Kevin Vaughan kevin@kevinvaughan.com
  * @copyright   2007 Kevin Vaughan
  * @license     http://www.gnu.org/copyleft/lesser.html  LGPL License 2.1
  */
 
 /**
- * A lightweight wrapper of Exception to provide basic package specific 
+ * A lightweight wrapper of Exception to provide basic package specific
  * unrecoverable program states.
- * 
+ *
  * @category WebServices
  * @package WSDLInterpreter
  */
-class WSDLInterpreterException extends Exception { } 
+class WSDLInterpreterException extends Exception { }
 
 /**
  * The main class for handling WSDL interpretation
- * 
+ *
  * The WSDLInterpreter is utilized for the parsing of a WSDL document for rapid
  * and flexible use within the context of PHP 5 scripts.
- * 
+ *
  * Example Usage:
  * <code>
  * require_once 'WSDLInterpreter.php';
@@ -60,11 +60,11 @@ class WSDLInterpreterException extends Exception { }
  * $wsdlInterpreter = new WSDLInterpreter($myWSDLlocation);
  * $wsdlInterpreter->savePHP('/example/output/directory/');
  * </code>
- * 
+ *
  * @category WebServices
  * @package WSDLInterpreter
  */
-class WSDLInterpreter 
+class WSDLInterpreter
 {
     /**
      * The WSDL document's URI
@@ -79,45 +79,45 @@ class WSDLInterpreter
      * @access private
      */
     private $_client = null;
-    
+
     /**
      * DOM document representation of the wsdl and its translation
      * @var DOMDocument
      * @access private
      */
     private $_dom = null;
-    
+
     /**
      * Array of classes and members representing the WSDL message types
      * @var array
      * @access private
      */
     private $_classmap = array();
-    
+
     /**
      * Array of sources for WSDL message classes
      * @var array
      * @access private
      */
     private $_classPHPSources = array();
-    
+
     /**
      * Array of sources for WSDL services
      * @var array
      * @access private
      */
     private $_servicePHPSources = array();
-    
+
     /**
      * Array of aliases for the services
      * @var array
      * @access private
-     */     
+     */
     private $_serviceNameAliases = array();
-    
+
     /**
      * Parses the target wsdl and loads the interpretation into object members
-     * 
+     *
      * @param string $wsdl  the URI of the wsdl to interpret
      * @throws WSDLInterpreterException Container for all WSDL interpretation problems
      * @todo Create plug in model to handle extendability of WSDL files
@@ -128,14 +128,14 @@ class WSDLInterpreter
             $this->_wsdl = $wsdl;
 	    $options = array();
             $this->_client = new SoapClient($wsdl, $options);
-            
+
             $this->_dom = new DOMDocument();
 	    // JB: Bei Fehlern diese Variante ohne LIBXML_DTDLOAD ausprobieren
 	    // $this->_dom->load($wsdl, LIBXML_DTDATTR|LIBXML_NOENT|LIBXML_XINCLUDE);
 	    $this->_dom->load($wsdl, LIBXML_DTDLOAD|LIBXML_DTDATTR|LIBXML_NOENT|LIBXML_XINCLUDE);
-            
+
             $xpath = new DOMXPath($this->_dom);
-            
+
             /**
              * wsdl:import
              */
@@ -151,7 +151,7 @@ class WSDLInterpreter
                 }
                 $parent->removeChild($entry);
             }
-            
+
             /**
              * xsd:import
              */
@@ -166,7 +166,7 @@ class WSDLInterpreter
             foreach ($entries as $entry) {
                 $parent = $entry->parentNode;
                 $xsd = new DOMDocument();
-                $result = @$xsd->load(dirname($this->_wsdl) . "/" . $entry->getAttribute("schemaLocation"), 
+                $result = @$xsd->load(dirname($this->_wsdl) . "/" . $entry->getAttribute("schemaLocation"),
                     LIBXML_DTDLOAD|LIBXML_DTDATTR|LIBXML_NOENT|LIBXML_XINCLUDE);
                 if ($result) {
                     foreach ($xsd->documentElement->childNodes as $node) {
@@ -176,13 +176,13 @@ class WSDLInterpreter
                     $parent->removeChild($entry);
                 }
 	    }
-            
-            
+
+
             $this->_dom->formatOutput = true;
         } catch (Exception $e) {
             throw new WSDLInterpreterException("Error loading WSDL document (".$e->getMessage().")");
         }
-        
+
         try {
             $xsl = new XSLTProcessor();
             $xslDom = new DOMDocument();
@@ -194,40 +194,40 @@ class WSDLInterpreter
         } catch (Exception $e) {
             throw new WSDLInterpreterException("Error interpreting WSDL document (".$e->getMessage().")");
         }
-       
-        // TODO extract initialization of the following methodes into a public method, so we can respect serviceAliases  
+
+        // TODO extract initialization of the following methodes into a public method, so we can respect serviceAliases
         $this->_loadClasses();
         $this->_loadServices();
     }
 
     /**
      * Validates a name against standard PHP naming conventions
-     * 
+     *
      * @param string $name the name to validate
-     * 
+     *
      * @return string the validated version of the submitted name
-     * 
+     *
      * @access private
      */
-    private function _validateNamingConvention($name) 
+    private function _validateNamingConvention($name)
     {
         return preg_replace('#[^a-zA-Z0-9_\x7f-\xff]*#', '',
             preg_replace('#^[^a-zA-Z_\x7f-\xff]*#', '', $name));
     }
-    
+
     /**
      * Validates a class name against PHP naming conventions and already defined
      * classes, and optionally stores the class as a member of the interpreted classmap.
-     * 
+     *
      * @param string $className the name of the class to test
      * @param boolean $addToClassMap whether to add this class name to the classmap
-     * 
+     *
      * @return string the validated version of the submitted class name
-     * 
+     *
      * @access private
      * @todo Add reserved keyword checks
      */
-    private function _validateClassName($className, $addToClassMap = true) 
+    private function _validateClassName($className, $addToClassMap = true)
     {
         $validClassName = $this->_validateNamingConvention($className);
 
@@ -237,27 +237,27 @@ class WSDLInterpreter
                 " Cannot redefine class with class loaded.");
         }
         */
-        
+
         if ($addToClassMap) {
             $this->_classmap[$className] = $validClassName;
         }
-        
+
         return $validClassName;
     }
 
-    
+
     /**
      * Validates a wsdl type against known PHP primitive types, or otherwise
      * validates the namespace of the type to PHP naming conventions
-     * 
+     *
      * @param string $type the type to test
-     * 
+     *
      * @return string the validated version of the submitted type
-     * 
+     *
      * @access private
      * @todo Extend type handling to gracefully manage extendability of wsdl definitions, add reserved keyword checking
-     */    
-    private function _validateType($type) 
+     */
+    private function _validateType($type)
     {
         // STM: check for namespaces
         $nsParts = array();
@@ -274,20 +274,20 @@ class WSDLInterpreter
         }
         switch (strtolower($type)) {
         case "int": case "integer": case "long": case "byte": case "short":
-        case "negativeInteger": case "nonNegativeInteger": 
+        case "negativeInteger": case "nonNegativeInteger":
         case "nonPositiveInteger": case "positiveInteger":
         case "unsignedByte": case "unsignedInt": case "unsignedLong": case "unsignedShort":
             $validType = "integer";
             break;
-            
+
         case "float": case "long": case "double": case "decimal":
             $validType = "double";
             break;
-            
+
         case "string": case "token": case "normalizedString": case "hexBinary":
             $validType = "string";
             break;
-            
+
         default:
             $validType = $this->_validateNamingConvention($type);
             // STM: re-add namespace
@@ -312,21 +312,21 @@ class WSDLInterpreter
         $phpTypes = array('integer', 'double', 'string');
         return in_array($type, $phpTypes);
     }
-    
+
     /**
-     * Loads classes from the translated wsdl document's message types 
-     * 
+     * Loads classes from the translated wsdl document's message types
+     *
      * @access private
      */
-    private function _loadClasses() 
+    private function _loadClasses()
     {
         $classes = $this->_dom->getElementsByTagName("class");
         foreach ($classes as $class) {
-            $class->setAttribute("validatedName", 
+            $class->setAttribute("validatedName",
                 $this->_validateClassName($class->getAttribute("name")));
             $extends = $class->getElementsByTagName("extends");
             if ($extends->length > 0) {
-                $extends->item(0)->nodeValue = 
+                $extends->item(0)->nodeValue =
                     $this->_validateClassName($extends->item(0)->nodeValue);
                 $classExtension = $extends->item(0)->nodeValue;
             } else {
@@ -334,18 +334,18 @@ class WSDLInterpreter
             }
             $properties = $class->getElementsByTagName("entry");
             foreach ($properties as $property) {
-                $property->setAttribute("validatedName", 
+                $property->setAttribute("validatedName",
                     $this->_validateNamingConvention($property->getAttribute("name")));
-                $property->setAttribute("type", 
+                $property->setAttribute("type",
                     $this->_validateType($property->getAttribute("type")));
             }
-            
+
             $sources[$class->getAttribute("validatedName")] = array(
                 "extends" => $classExtension,
                 "source" => $this->_generateClassPHP($class)
             );
         }
-        
+
         while (sizeof($sources) > 0)
         {
             $classesLoaded = 0;
@@ -361,24 +361,24 @@ class WSDLInterpreter
             }
         }
     }
-    
+
     /**
      * Generates the PHP code for a WSDL message type class representation
-     * 
+     *
      * This gets a little bit fancy as the magic methods __get and __set in
-     * the generated classes are used for properties that are not named 
+     * the generated classes are used for properties that are not named
      * according to PHP naming conventions (e.g., "MY-VARIABLE").  These
      * variables are set directly by SoapClient within the target class,
      * and could normally be retrieved by $myClass->{"MY-VARIABLE"}.  For
      * convenience, however, this will be available as $myClass->MYVARIABLE.
-     * 
+     *
      * @param DOMElement $class the interpreted WSDL message type node
      * @return string the php source code for the message type class
-     * 
+     *
      * @access private
      * @todo Include any applicable annotation from WSDL
      */
-    private function _generateClassPHP($class) 
+    private function _generateClassPHP($class)
     {
         $return = "";
         // $return .= 'if (!class_exists("'.$class->getAttribute("validatedName").'")) {'."\n";
@@ -391,7 +391,7 @@ class WSDLInterpreter
             $return .= " extends ".$extends->item(0)->nodeValue;
         }
         $return .= " {\n";
-    
+
         $properties = $class->getElementsByTagName("entry");
         foreach ($properties as $property) {
             $return .= "\t/**\n"
@@ -400,7 +400,7 @@ class WSDLInterpreter
                      . "\t */\n"
                      . "\t".'public $'.$property->getAttribute("validatedName").";\n";
         }
-    
+
         $extraParams = false;
         $paramMapReturn = "\t".'private $_parameterMap = array ('."\n";
         $properties = $class->getElementsByTagName("entry");
@@ -426,62 +426,62 @@ class WSDLInterpreter
         $paramMapReturn .= "\t".' */'."\n";
         $paramMapReturn .= "\t".'public function __get($var) '.
             '{ return $this->{$this->_parameterMap[$var]}; }'."\n";
-        
+
         if ($extraParams) {
             $return .= $paramMapReturn;
         }
-    
+
         // $return .= "}}";
         $return .= "}";
         return $return;
     }
-    
+
     /**
      * Loads services from the translated wsdl document
-     * 
+     *
      * @access private
      */
-    private function _loadServices() 
+    private function _loadServices()
     {
         $services = $this->_dom->getElementsByTagName("service");
         foreach ($services as $service) {
-            $service->setAttribute("validatedName", 
+            $service->setAttribute("validatedName",
                 $this->_validateClassName($service->getAttribute("name"), false));
             $functions = $service->getElementsByTagName("function");
             foreach ($functions as $function) {
-                $function->setAttribute("validatedName", 
+                $function->setAttribute("validatedName",
                     $this->_validateNamingConvention($function->getAttribute("name")));
                 $parameters = $function->getElementsByTagName("parameters");
                 if ($parameters->length > 0) {
                     $parameterList = $parameters->item(0)->getElementsByTagName("entry");
                     foreach ($parameterList as $variable) {
-                        $variable->setAttribute("validatedName", 
+                        $variable->setAttribute("validatedName",
                             $this->_validateNamingConvention($variable->getAttribute("name")));
-                        $variable->setAttribute("type", 
+                        $variable->setAttribute("type",
                             $this->_validateType($variable->getAttribute("type")));
                     }
                 }
             }
-            
-            $this->_servicePHPSources[$service->getAttribute("validatedName")] = 
+
+            $this->_servicePHPSources[$service->getAttribute("validatedName")] =
                 $this->_generateServicePHP($service);
         }
     }
-    
+
     /**
      * Generates the PHP code for a WSDL service class representation
-     * 
+     *
      * This method, in combination with generateServiceFunctionPHP, create a PHP class
      * representation capable of handling overloaded methods with strict parameter
      * type checking.
-     * 
+     *
      * @param DOMElement $service the interpreted WSDL service node
      * @return string the php source code for the service class
-     * 
+     *
      * @access private
      * @todo Include any applicable annotation from WSDL
      */
-    private function _generateServicePHP($service) 
+    private function _generateServicePHP($service)
     {
         $return = "";
         // $return .= 'if (!class_exists("'.$service->getAttribute("validatedName").'")) {'."\n";
@@ -520,7 +520,7 @@ class WSDLInterpreter
         $return .= "\t".' */'."\n";
         $return .= "\t".'private $wsHandle;'."\n\n";
         // /STM
-        
+
         $return .= "\t".'/**'."\n";
         $return .= "\t".' * Constructor using wsdl location and options array'."\n";
         $return .= "\t".' * @param string $wsdl WSDL location for this service'."\n";
@@ -567,18 +567,18 @@ class WSDLInterpreter
 //        $return .= "\t}\n\n";
 
 
-        $functionMap = array();        
+        $functionMap = array();
         $functions = $service->getElementsByTagName("function");
         foreach ($functions as $function) {
             if (!isset($functionMap[$function->getAttribute("validatedName")])) {
                 $functionMap[$function->getAttribute("validatedName")] = array();
             }
             $functionMap[$function->getAttribute("validatedName")][] = $function;
-        }    
+        }
         foreach ($functionMap as $functionName => $functionNodeList) {
             $return .= $this->_generateServiceFunctionPHP($functionName, $functionNodeList)."\n\n";
         }
-    
+
         // $return .= "}}";
         $return .= "}";
         return $return;
@@ -586,19 +586,19 @@ class WSDLInterpreter
 
     /**
      * Generates the PHP code for a WSDL service operation function representation
-     * 
+     *
      * The function code that is generated examines the arguments that are passed and
      * performs strict type checking against valid argument combinations for the given
      * function name, to allow for overloading.
-     * 
+     *
      * @param string $functionName the php function name
      * @param array $functionNodeList array of DOMElement interpreted WSDL function nodes
      * @return string the php source code for the function
-     * 
+     *
      * @access private
      * @todo Include any applicable annotation from WSDL
-     */    
-    private function _generateServiceFunctionPHP($functionName, $functionNodeList) 
+     */
+    private function _generateServiceFunctionPHP($functionName, $functionNodeList)
     {
         $return = "";
         $return .= "\t".'/**'."\n";
@@ -655,22 +655,22 @@ class WSDLInterpreter
         $return .= "\t\t".'return $this->wsHandle->__soapCall("'.
             $functionNodeList[0]->getAttribute("name").'", array($'.$functionName.'));'."\n";
         $return .= "\t".'}'."\n";
-        
+
         return $return;
     }
-    
-	/**
+
+    /**
      * Set an alias for a given ServiceName. The alias will replace the ServiceNames which will be provided from the WSDL.
      */
     public function setServiceAlias($serviceName, $serviceAlias)
     {
       $this->_serviceNameAliases[$serviceName] = $serviceAlias;
     }
-    
+
     /**
      * Returns the corresponding alias to the given ServiceName.
      * If no alias is defined, the actual ServiceName is returned.
-     * 
+     *
      * @param string $serviceName
      */
     private function getServiceAlias($serviceName)
@@ -684,17 +684,17 @@ class WSDLInterpreter
 
     /**
      * Saves the PHP source code that has been loaded to a target directory.
-     * 
+     *
      * Services will be saved by their validated name, and classes will be included
      * with each service file so that they can be utilized independently.
-     * 
+     *
      * @param string $outputDirectory the destination directory for the source code
      * @return array array of source code files that were written out
      * @throws WSDLInterpreterException problem in writing out service sources
      * @access public
      * @todo Add split file options for more efficient output
      */
-    public function savePHP($outputDirectory) 
+    public function savePHP($outputDirectory)
     {
         if (sizeof($this->_servicePHPSources) == 0) {
             throw new WSDLInterpreterException("No services loaded");
@@ -716,7 +716,7 @@ class WSDLInterpreter
         $outputFiles = array();
         foreach ($this->_servicePHPSources as $serviceName => $serviceCode) {
             $serviceName = $this->getServiceAlias($serviceName);
-            
+
             // STM - Added PHP5.3 namespace, Added Base-Classes for custom overwrites
             //$filename = $outputDirectory."/".$serviceName.".php";
             //if (file_put_contents($filename,
@@ -732,7 +732,7 @@ class WSDLInterpreter
                     throw new WSDLInterpreterException("Unable to create dir ". $basedir ."!");
                 }
             }
-            
+
             $serviceCode = str_replace('class '. $serviceName, 'abstract class '. $serviceName .'Base', $serviceCode); // adjust class definition to be abstract
             if (file_put_contents($basefile,
                     "<?php\n\nnamespace ".$serviceName.";\n\n".$classSource."\n\n".$serviceCode)) {
@@ -788,7 +788,7 @@ require \'generated/'.$serviceName.'Base.php\';
         $outputFiles = array();
         foreach ($this->_servicePHPSources as $serviceName => $serviceCode) {
         	$serviceName = $this->getServiceAlias($serviceName);
-        	
+
             $filename = $outputDirectory."/".$serviceName.".php";
             if(file_exists($filename)) return true;
         }
